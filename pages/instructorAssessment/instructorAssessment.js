@@ -55,7 +55,7 @@ var filenames = function(locals) {
 };
 
 router.get('/', function(req, res, next) {
-    if (res.locals.assessment.type !== 'Assigned') return next();
+    if (res.locals.assessment.type == 'Live') return next();
     debug('GET /');
     async.series([
         function(callback) {
