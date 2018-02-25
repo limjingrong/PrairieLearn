@@ -11,11 +11,38 @@
     <script src="/localscripts/scatter.js"></script>
     <script src="/localscripts/histmini.js"></script>
     <script src="/localscripts/parallel_histograms.js"></script>
+    <script src="/javascripts/socket.io.js"></script>
   </head>
   <body>
     <script>
       $(function () {
-          $('[data-toggle="popover"]').popover()
+          $('[data-toggle="popover"]').popover();
+          
+          var socket = io();
+
+          socket.on('update', function() {window.location.reload(true);});
+          socket.on('change:stderr', function(msg) {$("#stderr-" + msg.job_id).text(msg.stderr);});
+          socket.on('change:stdout', function(msg) {$("#stdout-" + msg.job_id).text(msg.stdout);});
+          socket.on('change:output', function(msg) {$("#output-" + msg.job_id).text(msg.output);});
+
+          // Join the rooms for the job_sequence and for each individual job.
+          // Check return values for a change that happened since we rendered the page
+          // and reload if anything changed. This avoids the race condition where
+          // jobs change between page render and socket activation.
+
+          socket.emit('joinJobSequence', {job_sequence_id: <%= job_sequence.id %>}, function(msg) {
+          if (msg.job_count != '<%= job_sequence.job_count %>') {window.location.reload(true);}
+          });
+
+          <% job_sequence.jobs.forEach(function(job) { %>
+            socket.emit('joinJob', {job_id: <%= job.id %>}, function(msg) {
+            if (msg.status != '<%= job.status %>') {window.location.reload(true);}
+            $("#stderr-" + <%= job.id %>).text(msg.stderr);
+            $("#stdout-" + <%= job.id %>).text(msg.stdout);
+            $("#output-" + <%= job.id %>).text(msg.output);
+          });
+          <% }); %>
+
       });
     </script>
     <%- include('../partials/navbar', {navPage: 'assessment'}); %>
